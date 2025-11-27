@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+{% set body_class = "dashboard" %}
+{% block content %}
+<section class="dashboard-hero">
+    <div>
+        <p class="eyebrow">Hey {{ username|capitalize }} 👋</p>
+        <h1>{{ farm_name }}</h1>
+        <p>Drop a crop idea, let AgroPulse choreograph the perfect sowing window, market match, and contingency plan.</p>
+    </div>
+    <div class="dashboard-metrics">
+        <article>
+            <p>Insights generated</p>
+            <h2>{{ history|length }}</h2>
+        </article>
+        <article>
+            <p>Quick switch crops suggested</p>
+            <h2>12</h2>
+        </article>
+        <article>
+            <p>Market alignment score</p>
+            <h2>94%</h2>
+        </article>
+    </div>
+    <article class="weather-widget" id="weatherWidget">
+        <p class="eyebrow">Current weather</p>
+        <h2>{{ weather.city or default_location.city }}</h2>
+        <p class="temp">
+            {% if weather.temp_c is defined and weather.temp_c is not none %}
+                {{ "%.1f"|format(weather.temp_c) }}°C
+            {% else %}
+                —°C
+            {% endif %}
+            · {{ weather.conditions or "Partly cloudy" }}
+        </p>
+        <p class="meta">
+            Humidity {{ weather.humidity if weather.humidity is not none else "—" }}% •
+            Wind {{ weather.wind if weather.wind is not none else "—" }} m/s
+        </p>
+    </article>
+</section>
+
+<div class="location-modal" id="locationModal">
+    <div class="location-card">
+        <p class="eyebrow">Allow location</p>
+        <h3>We need your field coordinates</h3>
+        <p>AgroPulse auto-detects your location to pair real-time weather with market timing. Tap below to grant access.</p>
+        <button class="btn primary full" id="locationButton">Use my location</button>
+        <p class="geo-status modal-status" id="modalStatus">We’ll never store your exact coordinates.</p>
+    </div>
+</div>
+
+<section class="insight-grid">
+    <article class="insight-card">
+        <h3>Request fresh intelligence</h3>
+        <form method="post" id="insight-form">
+            <label>
+                Crop name
+                <input type="text" name="crop_name" placeholder="Basmati Rice" required>
+            </label>
+            <label>
+                Land size
+                <input type="text" name="land_size" placeholder="5 acres" required>
+            </label>
+            <label>
+                City name <span class="optional">(optional if you rely on auto location)</span>
+                <input type="text" name="city_name" placeholder="Auto-detected when left blank">
+            </label>
+            <input type="hidden" name="latitude" id="latitude">
+            <input type="hidden" name="longitude" id="longitude">
+            <button type="submit" class="btn primary full">Generate response</button>
+            <p class="geo-status" id="geoStatus">Detecting your field location…</p>
+        </form>
+    </article>
+
+    <article class="insight-card result-card">
+        {% if active_result %}
+            <div class="result-header">
+                <div>
+                    <h2 class="crop-title">{{ active_result.crop }} Plan</h2>
+                    <p class="crop-subtitle">{{ active_result.land_size }}</p>
+                </div>
+                <small class="result-timestamp">Generated {{ active_result.timestamp.strftime("%b %d, %Y %H:%M") }}</small>
+            </div>
+            {% set summary = active_result.summary or {} %}
+            <div class="plan-grid">
+                <article class="plan-card">
+                    <div class="plan-icon">📅</div>
+                    <div>
+                        <p class="plan-label">Optimal Planting Date</p>
+                        <h3 class="plan-value">{{ summary.get('optimal_planting_date', '—') }}</h3>
+                    </div>
+                </article>
+                <article class="plan-card">
+                    <div class="plan-icon">🌾</div>
+                    <div>
+                        <p class="plan-label">Expected Harvest Date</p>
+                        <h3 class="plan-value">{{ summary.get('expected_harvest_date', '—') }}</h3>
+                    </div>
+                </article>
+                <article class="plan-card">
+                    <div class="plan-icon">📈</div>
+                    <div>
+                        <p class="plan-label">Expected Market Price</p>
+                        <h3 class="plan-value">{{ summary.get('expected_market_price_inr', '—') }}</h3>
+                    </div>
+                </article>
+                <article class="plan-card">
+                    <div class="plan-icon">💧</div>
+                    <div>
+                        <p class="plan-label">Irrigation Method</p>
+                        <h3 class="plan-value">{{ summary.get('irrigation_method', '—') }}</h3>
+                    </div>
+                </article>
+                <article class="plan-card">
+                    <div class="plan-icon">⏱️</div>
+                    <div>
+                        <p class="plan-label">Watering Frequency</p>
+                        <h3 class="plan-value">{{ summary.get('watering_frequency', '—') }}</h3>
+                    </div>
+                </article>
+            </div>
+            {% set sections_html = active_result.sections_html or {} %}
+            {% if sections_html %}
+                <div class="sections-container">
+                    {% if sections_html.get('market_timed') %}
+                        <div class="section-block markdown">
+                            {{ sections_html.market_timed|safe }}
+                        </div>
+                    {% endif %}
+                    {% if sections_html.get('weather_soil') %}
+                        <div class="section-block markdown">
+                            {{ sections_html.weather_soil|safe }}
+                        </div>
+                    {% endif %}
+                    {% if sections_html.get('demand_outlook') %}
+                        <div class="section-block markdown">
+                            {{ sections_html.demand_outlook|safe }}
+                        </div>
+                    {% endif %}
+                    {% if sections_html.get('timeline') %}
+                        <div class="section-block markdown">
+                            {{ sections_html.timeline|safe }}
+                        </div>
+                    {% endif %}
+                    {% if sections_html.get('actions') %}
+                        <div class="section-block markdown">
+                            {{ sections_html.actions|safe }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="result-body markdown">
+                    {{ active_result.insights_html|safe }}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="placeholder">
+                <p>No insights yet. Submit the form to view your first market-ready plan.</p>
+            </div>
+        {% endif %}
+    </article>
+</section>
+
+<section class="history">
+    <h3>Recent playbooks</h3>
+    {% if history %}
+        <div class="history-list">
+            {% for item in history %}
+                <details>
+                    <summary>
+                        <div>
+                            <h4>{{ item.crop }} Plan</h4>
+                            <p>{{ item.land_size }} · {{ item.location_name }}</p>
+                        </div>
+                        <small>{{ item.timestamp.strftime("%b %d, %Y") }}</small>
+                    </summary>
+                    {% set hist_summary = item.summary or {} %}
+                    {% if hist_summary %}
+                        <div class="history-summary-grid">
+                            <div class="history-summary-item">
+                                <p class="history-label">📅 Planting Date</p>
+                                <h5>{{ hist_summary.get('optimal_planting_date', '—') }}</h5>
+                            </div>
+                            <div class="history-summary-item">
+                                <p class="history-label">🌾 Harvest Date</p>
+                                <h5>{{ hist_summary.get('expected_harvest_date', '—') }}</h5>
+                            </div>
+                            <div class="history-summary-item">
+                                <p class="history-label">📈 Market Price</p>
+                                <h5>{{ hist_summary.get('expected_market_price_inr', '—') }}</h5>
+                            </div>
+                            <div class="history-summary-item">
+                                <p class="history-label">💧 Irrigation</p>
+                                <h5>{{ hist_summary.get('irrigation_method', '—') }}</h5>
+                            </div>
+                            <div class="history-summary-item">
+                                <p class="history-label">⏱️ Frequency</p>
+                                <h5>{{ hist_summary.get('watering_frequency', '—') }}</h5>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% set hist_sections_html = item.sections_html or {} %}
+                    {% if hist_sections_html %}
+                        <div class="history-sections">
+                            {% if hist_sections_html.get('market_timed') %}
+                                <div class="history-section-block markdown">
+                                    {{ hist_sections_html.market_timed|safe }}
+                                </div>
+                            {% endif %}
+                            {% if hist_sections_html.get('weather_soil') %}
+                                <div class="history-section-block markdown">
+                                    {{ hist_sections_html.weather_soil|safe }}
+                                </div>
+                            {% endif %}
+                            {% if hist_sections_html.get('demand_outlook') %}
+                                <div class="history-section-block markdown">
+                                    {{ hist_sections_html.demand_outlook|safe }}
+                                </div>
+                            {% endif %}
+                            {% if hist_sections_html.get('timeline') %}
+                                <div class="history-section-block markdown">
+                                    {{ hist_sections_html.timeline|safe }}
+                                </div>
+                            {% endif %}
+                            {% if hist_sections_html.get('actions') %}
+                                <div class="history-section-block markdown">
+                                    {{ hist_sections_html.actions|safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="history-detail markdown">
+                            {{ item.insights_html|safe }}
+                        </div>
+                    {% endif %}
+                </details>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Results will appear here once you generate them.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const statusEl = document.getElementById("geoStatus");
+const latEl = document.getElementById("latitude");
+const lonEl = document.getElementById("longitude");
+const weatherWidget = document.getElementById("weatherWidget");
+const serverWeather = {{ weather|tojson }};
+const locationModal = document.getElementById("locationModal");
+const locationButton = document.getElementById("locationButton");
+const modalStatus = document.getElementById("modalStatus");
+const fallbackLocation = {{ default_location|tojson }};
+let fallbackTimer = null;
+let locationLocked = false;
+
+function updateStatus(message) {
+    if (statusEl) statusEl.textContent = message;
+}
+
+function updateModalStatus(message) {
+    if (modalStatus) modalStatus.textContent = message;
+}
+
+function safeValue(value, fallback = "—") {
+    return value === undefined || value === null || value === "" ? fallback : value;
+}
+
+function renderWeather(data) {
+    if (!weatherWidget || !data || !data.city) return;
+    weatherWidget.innerHTML = `
+        <p class="eyebrow">Current weather</p>
+        <h2>${data.city}</h2>
+        <p class="temp">${safeValue(data.temp_c, "–")}°C · ${safeValue(data.conditions)}</p>
+        <p class="meta">Humidity ${safeValue(data.humidity)}% • Wind ${safeValue(data.wind)} m/s</p>
+    `;
+}
+
+async function fetchWeather(lat, lon) {
+    try {
+        const response = await fetch(\`/api/weather?lat=\${lat}&lon=\${lon}\`);
+        const data = await response.json();
+        if (response.ok) {
+            renderWeather(data);
+        }
+    } catch (error) {
+        console.error("Weather fetch failed", error);
+    }
+}
+
+function detectLocation() {
+    if (!navigator.geolocation) {
+        updateStatus("Device location unsupported.");
+        updateModalStatus("Device location unsupported.");
+        applyFallback();
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+            const lat = coords.latitude.toFixed(4);
+            const lon = coords.longitude.toFixed(4);
+            latEl.value = lat;
+            lonEl.value = lon;
+            updateStatus("Location detected. Ready when you are.");
+            updateModalStatus("Location detected. You can close this window.");
+            fetchWeather(lat, lon);
+            closeModal();
+            locationLocked = true;
+            if (fallbackTimer) {
+                clearTimeout(fallbackTimer);
+                fallbackTimer = null;
+            }
+        },
+        () => {
+            updateStatus("Unable to detect location. Please enable permissions.");
+            updateModalStatus("Permission denied. Please allow access in your browser.");
+            applyFallback();
+        }
+    );
+}
+
+function openModal() {
+    locationModal?.classList.add("open");
+}
+
+function closeModal() {
+    locationModal?.classList.remove("open");
+}
+
+if (locationButton) {
+    locationButton.addEventListener("click", () => {
+        updateModalStatus("Requesting access from your browser…");
+        startFallbackTimer();
+        detectLocation();
+    });
+}
+
+if (serverWeather && serverWeather.city) {
+    renderWeather(serverWeather);
+}
+
+function startFallbackTimer() {
+    if (!fallbackTimer) {
+        fallbackTimer = setTimeout(applyFallback, 5000);
+    }
+}
+
+function applyFallback() {
+    if (locationLocked || !fallbackLocation) return;
+    latEl.value = fallbackLocation.lat;
+    lonEl.value = fallbackLocation.lon;
+    updateStatus(`Using ${fallbackLocation.city} baseline.`);
+    updateModalStatus(`Using ${fallbackLocation.city} fallback after timeout.`);
+    fetchWeather(fallbackLocation.lat, fallbackLocation.lon);
+    closeModal();
+    locationLocked = true;
+    if (fallbackTimer) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+    }
+}
+
+if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        if (result.state === "granted") {
+            startFallbackTimer();
+            detectLocation();
+        } else {
+            openModal();
+            startFallbackTimer();
+        }
+    }).catch(() => {
+        openModal();
+        startFallbackTimer();
+    });
+} else {
+    openModal();
+    startFallbackTimer();
+}
+</script>
+{% endblock %}
+

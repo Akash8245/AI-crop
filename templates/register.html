@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-card">
+    <div>
+        <h1>Create your AgroPulse pass</h1>
+        <p>Bring your farm or collective online in under a minute.</p>
+    </div>
+    <form method="post" class="form-grid">
+        <label>
+            Farm / Collective Name
+            <input type="text" name="farm_name" placeholder="Nebula Acres" required>
+        </label>
+        <label>
+            Username
+            <input type="text" name="username" placeholder="futurefarmer" required>
+        </label>
+        <label>
+            Password
+            <input type="password" name="password" placeholder="••••••••" required>
+        </label>
+        <button type="submit" class="btn primary">Sign up</button>
+        <p class="form-footnote">Already a member? <a href="{{ url_for('login') }}">Sign in</a>.</p>
+    </form>
+</section>
+{% endblock %}
+

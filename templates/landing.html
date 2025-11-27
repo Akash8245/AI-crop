@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% set body_class = "landing" %}
+{% block content %}
+<section class="hero">
+    <div class="hero-text">
+        <p class="eyebrow">Smart farming assistant</p>
+        <h1>Grow when markets crave it.</h1>
+        <p>AgroPulse pairs realtime market signals, Gemini intelligence, and hyper-local climate cues so you know the perfect week to plant and harvest.</p>
+        <div class="hero-actions">
+            <a href="{{ url_for('register') }}" class="btn primary">Create free account</a>
+            <a href="{{ url_for('login') }}" class="btn secondary">Access dashboard</a>
+        </div>
+        <div class="hero-meta">
+            <span>⚡ Powered by Google Gemini</span>
+            <span>🛰️ Hyper-local insights</span>
+            <span>📈 Market-led scheduling</span>
+        </div>
+    </div>
+    <div class="hero-visual">
+        <div class="orb orb-one"></div>
+        <div class="orb orb-two"></div>
+        <div class="stats-card">
+            <p>Predicted harvest ROI</p>
+            <h2>+32%</h2>
+            <small>Aligning sowing with high-demand windows.</small>
+        </div>
+        <div class="weather-card">
+            <p>Next rain pulse</p>
+            <h3>4 days</h3>
+            <small>Ideal soil moisture for seed push 🌧️</small>
+        </div>
+    </div>
+</section>
+
+<section class="panels">
+    <article>
+        <h3>Seasonal radar</h3>
+        <p>Understand when each crop surges in price and sync your planting window automatically.</p>
+    </article>
+    <article>
+        <h3>Soil & sky checklists</h3>
+        <p>Gemini interprets local soil health and forecast anomalies so you can prepare ahead.</p>
+    </article>
+    <article>
+        <h3>Alternative playbook</h3>
+        <p>When a crop saturates the city, AgroPulse nudges you toward higher demand varieties.</p>
+    </article>
+</section>
+{% endblock %}
+
